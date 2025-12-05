@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AVIV Gift Wrap Race: 16-Bit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Retro Palette */
+      --primary: #008080;   /* Teal */
+      --secondary: #40E0D0; /* Turquoise */
+      --accent: #FF00FF;    /* Magenta (Good Gift) */
+      --bad: #663399;       /* Rebecca Purple (Bad Gift) */
+      --white: #FFFFFF;
+      --black: #000000;
+      --gold: #FFD700;
+      --danger: #FF0000;
+      
+      --border: 4px solid var(--black);
+      --shadow: 4px 4px 0px var(--black);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background-color: #202020;
+      /* CRT Scanline Effect */
+      background-image: 
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 2px, 3px 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      color: var(--white);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* --- Header Area --- */
+    .header {
+      text-align: center;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-size: 24px;
+      color: var(--gold);
+      text-shadow: 4px 4px 0 var(--black);
+      line-height: 1.4;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 10px;
+      padding: 0 5px;
+    }
+
+    .score-box { text-align: left; }
+    .score-label { font-size: 10px; color: var(--secondary); margin-bottom: 5px;}
+    .score-val { font-size: 20px; text-shadow: 2px 2px 0 var(--black); }
+
+    .lives-container { display: flex; gap: 8px; }
+
+    /* Pixel Heart */
+    .life {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      transform: rotate(45deg);
+      margin: 4px 8px; /* Spacing for rotated element */
+      background: var(--danger);
+      border: 2px solid var(--black);
+      /* Main shadow */
+      box-shadow: 4px 4px 0 var(--black);
+      transition: opacity 0.1s, background-color 0.1s, border-color 0.1s;
+    }
+
+    /* The two top bumps of the heart */
+    .life::before,
+    .life::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: var(--danger);
+      border: 2px solid var(--black);
+      transition: background-color 0.1s, border-color 0.1s;
+    }
+
+    .life::before {
+      top: -8px;
+      left: -2px;
+      border-bottom: none;
+    }
+
+    .life::after {
+      left: -8px;
+      top: -2px;
+      border-right: none;
+    }
+
+    /* Lost heart state */
+    .life.lost {
+      opacity: 0.5;
+      background: var(--black);
+      box-shadow: none;
+      border-color: #555;
+    }
+    .life.lost::before,
+    .life.lost::after {
+      background: var(--black);
+      border-color: #555;
+    }
+
+    /* --- Timer Bar --- */
+    .timer-container {
+      width: 100%;
+      height: 20px;
+      background: var(--black);
+      border: var(--border);
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .timer-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--gold);
+      transition: width 0.1s linear;
+    }
+    
+    .timer-fill.danger { background: var(--danger); }
+
+    /* --- Game Area --- */
+    .game-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .gift-display {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    /* Pixel Gift Box */
+    .gift-box {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      border: var(--border);
+      box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
+      z-index: 2;
+      transition: transform 0.05s; /* Snappy */
+    }
+
+    .gift-box.good { background: var(--accent); }
+    .gift-box.bad { background: var(--bad); }
+
+    /* Animations */
+    .gift-box.hit { transform: translate(2px, 2px); box-shadow: 6px 6px 0px rgba(0,0,0,0.5); }
+    
+    .gift-box.wrapped { animation: popOut 0.4s steps(5) forwards; }
+    .gift-box.shake { animation: shake 0.4s steps(4); }
+    
+    @keyframes popOut {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 1; filter: brightness(1.5); }
+      100% { transform: scale(0); opacity: 0; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      50% { transform: translateX(10px); }
+      75% { transform: translateX(-10px); }
+    }
+
+    /* Pixel Ribbons */
+    .ribbon-v, .ribbon-h {
+      position: absolute;
+      background: var(--white);
+      border: 2px solid var(--black);
+      opacity: 0;
+    }
+    /* Hide default borders where they overlap for cleaner look */
+    .ribbon-v { 
+      top: -4px; left: 50%; transform: translateX(-50%); 
+      width: 24px; height: calc(100% + 8px); 
+      border-top: 4px solid var(--black); border-bottom: 4px solid var(--black); border-left: 2px solid var(--black); border-right: 2px solid var(--black);
+    }
+    .ribbon-h { 
+      top: 50%; left: -4px; transform: translateY(-50%); 
+      width: calc(100% + 8px); height: 24px; 
+      border-left: 4px solid var(--black); border-right: 4px solid var(--black); border-top: 2px solid var(--black); border-bottom: 2px solid var(--black);
+    }
+
+    /* Pixel Bow */
+    .bow {
+      position: absolute;
+      top: -25px; left: 50%;
+      transform: translateX(-50%);
+      width: 30px; height: 30px;
+      background: var(--white);
+      border: 4px solid var(--black);
+      opacity: 0;
+      z-index: 3;
+    }
+    /* Side loops of bow */
+    .bow::before, .bow::after {
+      content:''; position:absolute; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px;
+      background: var(--white);
+      border: 4px solid var(--black);
+    }
+    .bow::before { left: -20px; border-right: none; }
+    .bow::after { right: -20px; border-left: none; }
+
+    /* Label */
+    .gift-label {
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--black);
+      background: var(--white);
+      padding: 8px 12px;
+      border: var(--border);
+      box-shadow: var(--shadow);
+      white-space: nowrap;
+    }
+    
+    .gift-label.good-txt { color: var(--accent); }
+    .gift-label.bad-txt { color: var(--bad); }
+
+    /* Floating Text */
+    .floating-text {
+      position: absolute;
+      font-size: 20px;
+      color: var(--white);
+      text-shadow: 2px 2px 0 var(--black);
+      pointer-events: none;
+      animation: floatUp 0.8s steps(10) forwards;
+      z-index: 10;
+      background: var(--black);
+      padding: 4px;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translate(-50%, -50%); opacity: 1; }
+      100% { transform: translate(-50%, -150%); opacity: 0; }
+    }
+
+    /* --- Action Area --- */
+    .wrap-progress-bg {
+      width: 100%;
+      height: 24px;
+      background: var(--black);
+      border: 4px solid var(--white);
+      margin-bottom: 20px;
+    }
+    .wrap-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--secondary);
+      /* No transition for that raw pixel feel, or very fast */
+      transition: width 0.05s steps(4);
+    }
+
+    .tap-area {
+      width: 100%;
+      height: 100px;
+      background: #333;
+      border: 4px dashed var(--white);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: var(--white);
+      font-size: 16px;
+      cursor: pointer;
+      position: relative;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .tap-area:active { background: #555; transform: translateY(2px); }
+    .tap-hint { font-size: 10px; color: var(--gold); margin-top: 10px; }
+
+    /* --- Modals --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    .modal-overlay.show { display: flex; }
+
+    #introScreen { background: var(--primary); z-index: 200; }
+
+    .modal {
+      background: var(--secondary);
+      border: var(--border);
+      box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+      padding: 20px;
+      text-align: center;
+      width: 90%;
+      max-width: 340px;
+      position: relative;
+    }
+    
+    /* Decorative corner screws */
+    .modal::after {
+      content: ''; position: absolute; top: 4px; left: 4px; width: 4px; height: 4px; background: white; box-shadow: calc(100% - 8px) 0 white;
+    }
+
+    .modal h2, .intro-title { 
+      font-size: 24px; 
+      color: var(--white); 
+      text-shadow: 4px 4px 0 var(--black);
+      margin-bottom: 20px; 
+      line-height: 1.5;
+    }
+    
+    .modal p { font-size: 12px; margin-bottom: 20px; line-height: 1.6; color: var(--black); font-weight: bold;}
+
+    /* Tutorial Grid */
+    .tutorial-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .tutorial-card {
+        background: rgba(0,0,0,0.2);
+        padding: 10px;
+        border: 2px solid var(--black);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .mini-gift {
+        width: 40px; height: 40px;
+        border: 2px solid var(--black);
+        margin-bottom: 10px;
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+    }
+    .mini-gift.good { background: var(--accent); }
+    .mini-gift.bad { background: var(--bad); }
+
+    .btn {
+      background: var(--gold);
+      color: var(--black);
+      border: var(--border);
+      box-shadow: 4px 4px 0 var(--black);
+      padding: 15px;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      width: 100%;
+      text-transform: uppercase;
+    }
+    .btn:active { transform: translate(4px, 4px); box-shadow: none; }
+    
+    .btn-green { background: #00FF00; }
+
+    /* Pixel Confetti */
+    .confetti {
+      position: absolute;
+      width: 8px; height: 8px;
+      background: var(--white);
+      animation: confetti-fall 0.8s steps(8) forwards;
+      box-shadow: 2px 2px 0 var(--black);
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100px) rotate(90deg); opacity: 0; }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- Introduction Screen -->
+<div class="modal-overlay show" id="introScreen">
+    <div class="modal">
+        <div class="intro-title">AVIV GIFT WRAP<br>RUSH</div>
+        
+        <div class="tutorial-grid">
+            <div class="tutorial-card">
+                <div class="mini-gift good"></div>
+                <div style="font-size:10px; color:var(--white)">TAP FAST</div>
+            </div>
+            <div class="tutorial-card">
+                <div class="mini-gift bad"></div>
+                <div style="font-size:10px; color:var(--white)">DO NOT TAP</div>
+            </div>
+        </div>
+        
+        <p>WATCH THE TIMER!</p>
+
+        <button class="btn btn-green" id="introStartBtn">START GAME</button>
+    </div>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="title">AVIV GIFT WRAP<br>RUSH</div>
+    
+    <div class="stats-row">
+      <div class="score-box">
+        <div class="score-label">SCORE</div>
+        <div class="score-val" id="score">000</div>
+      </div>
+      <div class="lives-container" id="livesContainer">
+        <div class="life"></div>
+        <div class="life"></div>
+        <div class="life"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-container">
+    <div class="timer-fill" id="timerBar"></div>
+  </div>
+
+  <!-- Game Area -->
+  <div class="game-area">
+    <div class="gift-display">
+      <div class="gift-box" id="giftBox">
+        <div class="ribbon-v" id="ribbonV"></div>
+        <div class="ribbon-h" id="ribbonH"></div>
+        <div class="bow" id="bow"></div>
+      </div>
+      <div class="gift-label" id="giftLabel">READY?</div>
+    </div>
+
+    <div class="wrap-progress-bg">
+      <div class="wrap-progress-fill" id="wrapBar"></div>
+    </div>
+
+    <div class="tap-area" id="tapArea">
+      <div>TAP HERE</div>
+      <div class="tap-hint" id="tapHint">(PINK=TAP PURPLE=WAIT)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Game Over Modal -->
+<div class="modal-overlay" id="gameOverModal">
+  <div class="modal">
+    <h2>GAME OVER</h2>
+    <p>SCORE: <span id="finalScore" style="color:var(--white); font-size: 20px;">0</span></p>
+    <!-- Message Element -->
+    <p id="gameOverMsg" style="font-size: 12px; color: var(--gold); margin-bottom: 20px; min-height: 1.2em;"></p>
+    <button class="btn" id="restartBtn">RETRY</button>
+  </div>
+</div>
+
+<script>
+  // Elements
+  const els = {
+    gameArea: document.querySelector('.game-area'),
+    score: document.getElementById('score'),
+    lives: document.getElementById('livesContainer'),
+    timerBar: document.getElementById('timerBar'),
+    giftBox: document.getElementById('giftBox'),
+    ribbonV: document.getElementById('ribbonV'),
+    ribbonH: document.getElementById('ribbonH'),
+    bow: document.getElementById('bow'),
+    giftLabel: document.getElementById('giftLabel'),
+    wrapBar: document.getElementById('wrapBar'),
+    tapArea: document.getElementById('tapArea'),
+    tapHint: document.getElementById('tapHint'),
+    modal: document.getElementById('gameOverModal'),
+    introScreen: document.getElementById('introScreen'),
+    finalScore: document.getElementById('finalScore'),
+    gameOverMsg: document.getElementById('gameOverMsg'), // New Reference
+    restartBtn: document.getElementById('restartBtn'),
+    introStartBtn: document.getElementById('introStartBtn')
+  };
+
+  // State
+  let state = {
+    score: 0,
+    lives: 3,
+    isActive: false,
+    giftType: 'good',
+    tapsNeeded: 0,
+    currentTaps: 0,
+    timeTotal: 0,
+    timeRemaining: 0,
+    lastFrameTime: 0
+  };
+
+  // Constants
+  const BASE_TAPS = 6;
+  const BASE_TIME = 3000;
+  const COLORS = {
+    textGood: 'TAP IT!',
+    textBad: 'WAIT!'
+  };
+
+  let highScore = localStorage.getItem('giftRacePixelHighScore') || 0;
+
+  // --- Game Loop ---
+  function update(timestamp) {
+    if (!state.isActive) return;
+
+    if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+    const delta = timestamp - state.lastFrameTime;
+    state.lastFrameTime = timestamp;
+
+    state.timeRemaining -= delta;
+    
+    const pct = (state.timeRemaining / state.timeTotal) * 100;
+    els.timerBar.style.width = `${Math.max(0, pct)}%`;
+    
+    if(pct < 30) els.timerBar.classList.add('danger');
+    else els.timerBar.classList.remove('danger');
+
+    if (state.timeRemaining <= 0) {
+      handleTimeout();
+    } else {
+      requestAnimationFrame(update);
+    }
+  }
+
+  function handleTimeout() {
+    state.isActive = false;
+
+    if (state.giftType === 'good') {
+      showFloatText("MISSED!", '#FF0000');
+      loseLife();
+    } else {
+      showFloatText("SAFE!", '#40E0D0');
+      addScore(5);
+      nextLevel();
+    }
+  }
+
+  // --- Mechanics ---
+  function startGame() {
+    state.score = 0;
+    state.lives = 3;
+    els.score.textContent = '000';
+    updateLivesUI();
+    els.modal.classList.remove('show');
+    
+    els.giftLabel.textContent = 'READY?';
+    resetVisuals();
+    state.isActive = false;
+  }
+
+  function resetVisuals() {
+    els.giftBox.className = 'gift-box';
+    els.giftBox.classList.remove('wrapped');
+    els.ribbonV.style.opacity = '0';
+    els.ribbonH.style.opacity = '0';
+    els.bow.style.opacity = '0';
+    els.wrapBar.style.width = '0%';
+  }
+
+  function nextLevel() {
+    resetVisuals();
+    
+    const isGood = Math.random() > 0.3;
+    state.giftType = isGood ? 'good' : 'bad';
+    
+    // Difficulty
+    state.tapsNeeded = Math.min(Math.floor(BASE_TAPS + (state.score / 30)), 12);
+    state.currentTaps = 0;
+    state.timeTotal = isGood 
+      ? Math.max(1400, BASE_TIME - (state.score * 30)) 
+      : 1500; 
+    
+    state.timeRemaining = state.timeTotal;
+
+    // UI
+    els.giftBox.classList.add(state.giftType);
+    els.giftLabel.textContent = isGood ? COLORS.textGood : COLORS.textBad;
+    els.giftLabel.className = 'gift-label ' + (isGood ? 'good-txt' : 'bad-txt');
+    els.tapHint.textContent = isGood ? "(TAP REPEATEDLY)" : "(DO NOT TAP)";
+
+    state.isActive = true;
+    state.lastFrameTime = 0;
+    requestAnimationFrame(update);
+  }
+
+  function handleInput(e) {
+    if(e.type === 'touchstart') e.preventDefault();
+    
+    if (els.giftLabel.textContent === 'READY?') {
+      nextLevel();
+      return;
+    }
+
+    if (!state.isActive) return;
+
+    // Visual feedback (reset animation)
+    els.giftBox.classList.remove('hit');
+    void els.giftBox.offsetWidth;
+    els.giftBox.classList.add('hit');
+
+    if (state.giftType === 'bad') {
+      state.isActive = false;
+      els.giftBox.classList.add('shake');
+      showFloatText("BAD!", '#FF0000');
+      setTimeout(loseLife, 400);
+      return;
+    }
+
+    // Good Gift
+    state.currentTaps++;
+    const progress = (state.currentTaps / state.tapsNeeded) * 100;
+    els.wrapBar.style.width = `${progress}%`;
+
+    if (progress > 30) els.ribbonV.style.opacity = '1';
+    if (progress > 60) els.ribbonH.style.opacity = '1';
+    
+    if (state.currentTaps >= state.tapsNeeded) {
+      state.isActive = false;
+      els.bow.style.opacity = '1';
+      els.giftBox.classList.add('wrapped');
+      createConfetti();
+      showFloatText("NICE!", '#FFFF00');
+      addScore(10);
+      setTimeout(nextLevel, 400);
+    }
+  }
+
+  function addScore(amount) {
+    state.score += amount;
+    els.score.textContent = state.score.toString().padStart(3, '0');
+  }
+
+  function loseLife() {
+    state.lives--;
+    updateLivesUI();
+    if (state.lives <= 0) {
+      gameOver();
+    } else {
+      setTimeout(nextLevel, 500);
+    }
+  }
+
+  function updateLivesUI() {
+    const lives = els.lives.children;
+    for (let i = 0; i < 3; i++) {
+      if (i < state.lives) lives[i].classList.remove('lost');
+      else lives[i].classList.add('lost');
+    }
+  }
+
+  function gameOver() {
+    state.isActive = false;
+    els.finalScore.textContent = state.score;
+    
+    // Custom Message Logic
+    let message = "";
+    let options = [];
+
+    if (state.score <= 50) {
+      options = [
+        "NO PASSENGER ALLOWED",
+        "VLADIMIR IS DISAPPOINTED.",
+        "AI CAN DO BETTER THAN YOU",
+        "GET OUT THE WAY"
+      ];
+    } else if (state.score <= 80) {
+      options = [
+        "YOUR DELIVERY IS OK",
+        "VLADIMIR APPROVES!",
+        "PUSH YOURSELF HARDER",
+        "PERFORMANCE = ON-TRACK"
+      ];
+    } else {
+      options = [
+        "YOU TRULY GET SHIT DONE",
+        "YOU MADE VLADIMIR CHUCKLE!",
+        "KKR HAS GREAT INTEREST IN YOU",
+        "YOU'VE RAISED THE BAR!"
+      ];
+    }
+    
+    message = options[Math.floor(Math.random() * options.length)];
+    els.gameOverMsg.textContent = message;
+
+    els.modal.classList.add('show');
+    
+    if (state.score > highScore) {
+      highScore = state.score;
+      localStorage.setItem('giftRacePixelHighScore', highScore);
+    }
+  }
+
+  // FX
+  function showFloatText(text, color) {
+    const el = document.createElement('div');
+    el.className = 'floating-text';
+    el.textContent = text;
+    el.style.color = color;
+    el.style.left = '50%';
+    el.style.top = '30%'; // Higher up
+    if(els.gameArea) {
+      els.gameArea.appendChild(el);
+      setTimeout(() => el.remove(), 800);
+    }
+  }
+
+  function createConfetti() {
+    for(let i=0; i<15; i++) {
+      const conf = document.createElement('div');
+      conf.className = 'confetti';
+      conf.style.left = 50 + (Math.random() * 40 - 20) + '%';
+      conf.style.top = '30%';
+      conf.style.backgroundColor = ['#FFD700', '#FF00FF', '#00FFFF', '#FFFFFF'][Math.floor(Math.random()*4)];
+      if(els.gameArea) {
+        els.gameArea.appendChild(conf);
+        setTimeout(() => conf.remove(), 800);
+      }
+    }
+  }
+
+  els.tapArea.addEventListener('touchstart', handleInput, {passive: false});
+  els.tapArea.addEventListener('mousedown', handleInput);
+  els.restartBtn.addEventListener('click', startGame);
+  els.introStartBtn.addEventListener('click', () => {
+    els.introScreen.classList.remove('show');
+  });
+
+</script>
+</body>
+</html>
