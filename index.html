@@ -705,22 +705,33 @@
       options = [
         "NO PASSENGER ALLOWED",
         "VLADIMIR IS DISAPPOINTED.",
-        "AI CAN DO BETTER THAN YOU",
+        "NEGATIVE ROI DETECTED",
+        "HR WANTS A QUICK CHAT",
         "GET OUT THE WAY"
       ];
     } else if (state.score <= 80) {
       options = [
         "YOUR DELIVERY IS OK",
-        "VLADIMIR APPROVES!",
+        "VLADIMIR IS TAKING NOTES",
         "PUSH YOURSELF HARDER",
+        "YOU MAY SURVIVE THE CUTS",
         "PERFORMANCE = ON-TRACK"
       ];
-    } else {
+    } else if (state.score <= 110) {
       options = [
         "YOU TRULY GET SHIT DONE",
         "YOU MADE VLADIMIR CHUCKLE!",
         "KKR HAS GREAT INTEREST IN YOU",
+        "SEE YOU AT THE TOP"
         "YOU'VE RAISED THE BAR!"
+      ];
+    } else {
+      options = [
+        "LARS GRANTS YOU ONE WISH ",
+        "VLADIMIR IS AFRAID OF YOU",
+        "YOU NOW HAVE A SEAT AT THE TABLE",
+        "KKR JUST DOUBLED THE BID",
+        "ABSOLUTE GIFT WRAP UNIT"
       ];
     }
     
